@@ -10,11 +10,11 @@ namespace KafkaFlow.Sample.Avro.Handlers
     {
         public Task Handle(IMessageContext context, ProtobufLogMessage message)
         {
-            Console.WriteLine(
-                "Partition: {0} | Offset: {1} | Message: {2} | Protobuf",
-                context.ConsumerContext.Partition,
-                context.ConsumerContext.Offset,
-                message.Message);
+            //Console.WriteLine(
+            //    "Partition: {0} | Offset: {1} | Message: {2} | Protobuf",
+            //    context.ConsumerContext.Partition,
+            //    context.ConsumerContext.Offset,
+            //    message.Message);
 
             return Task.CompletedTask;
         }

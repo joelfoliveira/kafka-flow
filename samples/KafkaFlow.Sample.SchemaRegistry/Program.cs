@@ -7,6 +7,9 @@
     using Confluent.SchemaRegistry.Serdes;
     using global::SchemaRegistry;
     using Handlers;
+    using KafkaFlow.Sample.SchemaRegistry.MessageTypes;
+    using KafkaFlow.Sample.SchemaRegistry.Middlewares;
+    using KafkaFlow.Serializer;
     using Microsoft.Extensions.DependencyInjection;
     using Producers;
     using TypedHandler;
@@ -20,9 +23,13 @@
             const string avroProducerName = "avro-producer";
             const string jsonProducerName = "json-producer";
             const string protobufProducerName = "protobuf-producer";
+            const string objProducerName = "obj-producer";
+            const string primitiveProducerName = "primitive-producer";
             const string avroTopic = "avro-topic";
             const string jsonTopic = "json-topic";
             const string protobufTopic = "protobuf-topic";
+            const string objTopic = "obj-topic";
+            const string primitiveTopic = "primitive-topic";
 
             services.AddKafka(
                 kafka => kafka
@@ -37,6 +44,7 @@
                                     .DefaultTopic(avroTopic)
                                     .AddMiddlewares(
                                         middlewares => middlewares
+                                            .AddAtBeginning<ProducerMetricsMiddleware>()
                                             .AddSchemaRegistryAvroSerializer(
                                                 new AvroSerializerConfig
                                                 {
@@ -49,6 +57,7 @@
                                     .DefaultTopic(jsonTopic)
                                     .AddMiddlewares(
                                         middlewares => middlewares
+                                            .AddAtBeginning<ProducerMetricsMiddleware>()
                                             .AddSchemaRegistryJsonSerializer<JsonLogMessage>(
                                                 new JsonSerializerConfig
                                                 {
@@ -61,11 +70,22 @@
                                     .DefaultTopic(protobufTopic)
                                     .AddMiddlewares(
                                         middlewares => middlewares
+                                            .AddAtBeginning<ProducerMetricsMiddleware>()
                                             .AddSchemaRegistryProtobufSerializer(
                                                 new ProtobufSerializerConfig
                                                 {
                                                     SubjectNameStrategy = SubjectNameStrategy.TopicRecord
                                                 })
+                                    )
+                            )
+                            .AddProducer(
+                                objProducerName,
+                                producer => producer
+                                    .DefaultTopic(objTopic)
+                                    .AddMiddlewares(
+                                        middlewares => middlewares
+                                            .AddSerializer<NewtonsoftJsonSerializer>()
+                                            .AddAtBeginning<ProducerMetricsMiddleware>()
                                     )
                             )
                             .AddConsumer(
@@ -76,12 +96,13 @@
                                     .WithWorkersCount(20)
                                     .WithAutoOffsetReset(AutoOffsetReset.Latest)
                                     .AddMiddlewares(
-                                        middlewares => middlewares
+                                        middlewares => middlewares                                            
                                             .AddSchemaRegistryAvroSerializer()
                                             .AddTypedHandlers(
                                                 handlers => handlers
                                                     .AddHandler<AvroMessageHandler>()
                                                     .AddHandler<AvroMessageHandler2>())
+                                            .Add<ConsumerMetricsMiddleware>()
                                     )
                             ) 
                         .AddConsumer(
@@ -95,6 +116,7 @@
                                     middlewares => middlewares
                                         .AddSchemaRegistryJsonSerializer<JsonLogMessage>()
                                         .AddTypedHandlers(handlers => handlers.AddHandler<JsonMessageHandler>())
+                                        .Add<ConsumerMetricsMiddleware>()
                                 )
                         )
                         .AddConsumer(
@@ -105,9 +127,24 @@
                                 .WithWorkersCount(20)
                                 .WithAutoOffsetReset(AutoOffsetReset.Latest)
                                 .AddMiddlewares(
-                                    middlewares => middlewares
+                                    middlewares => middlewares                                        
                                         .AddSchemaRegistryProtobufSerializer()
                                         .AddTypedHandlers(handlers => handlers.AddHandler<ProtobufMessageHandler>())
+                                        .Add<ConsumerMetricsMiddleware>()
+                                )
+                        )
+                        .AddConsumer(
+                            consumer => consumer
+                                .Topic(objTopic)
+                                .WithGroupId("obj-group-id")
+                                .WithBufferSize(100)
+                                .WithWorkersCount(20)
+                                .WithAutoOffsetReset(AutoOffsetReset.Latest)
+                                .AddMiddlewares(
+                                    middlewares => middlewares
+                                        .AddSerializer<NewtonsoftJsonSerializer>()
+                                        .AddTypedHandlers(handlers => handlers.AddHandler<UserMessageHandler>())
+                                        .Add<ConsumerMetricsMiddleware>()
                                 )
                         )
                     )
@@ -141,7 +178,10 @@
                                     new JsonLogMessage {Message = Guid.NewGuid().ToString()}),
                                 producers[protobufProducerName].ProduceAsync(
                                     Guid.NewGuid().ToString(),
-                                    new ProtobufLogMessage {Message = Guid.NewGuid().ToString()})
+                                    new ProtobufLogMessage {Message = Guid.NewGuid().ToString()}),
+                                producers[objProducerName].ProduceAsync(
+                                    Guid.NewGuid().ToString(),
+                                    new User { Id = Guid.NewGuid().ToString() })
                             );
                         }
 

@@ -5,17 +5,17 @@
     using System.Threading.Tasks;
     using global::Avro;
     using global::SchemaRegistry;
+    using KafkaFlow.Sample.SchemaRegistry.MessageTypes;
     using TypedHandler;
 
-    public class AvroMessageHandler : IMessageHandler<AvroLogMessage>
+    public class UserMessageHandler : IMessageHandler<User>
     {
-        public Task Handle(IMessageContext context, AvroLogMessage message)
+        public Task Handle(IMessageContext context, User message)
         {
             //Console.WriteLine(
-            //    "Partition: {0} | Offset: {1} | Message: {2} | Avro",
+            //    "Partition: {0} | Offset: {1} | Message: {2} | Obj",
             //    context.ConsumerContext.Partition,
-            //    context.ConsumerContext.Offset,
-            //    message.Severity.ToString());
+            //    context.ConsumerContext.Offset);
 
             return Task.CompletedTask;
         }
